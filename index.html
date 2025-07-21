@@ -71,90 +71,138 @@
 
   <div id="boxes" class="boxes-container"></div>
 
-  <script>
-    const letterMap = {
-      'N': 'July',
-      'Q': 'Auggy',
-      'U': 'Sep',
-      'Z': 'Deese',
-      'H': 'March',
-      'M': 'June'
-    };
+ <script>
+  const letterMap = {
+    'N': 'July',
+    'Q': 'Auggy',
+    'U': 'Sep',
+    'Z': 'Deese',
+    'H': 'March',
+    'M': 'June'
+  };
 
-    function choose(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
+  function choose(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  // convert 0–99 to words
+  function twoDigitToWords(n) {
+    const ones = [
+      'zero','one','two','three','four','five','six','seven','eight','nine',
+      'ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen',
+      'seventeen','eighteen','nineteen'
+    ];
+    const tensNames = [
+      '','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'
+    ];
+    if (n < 20) return ones[n];
+    const t = Math.floor(n/10), o = n % 10;
+    return o ? `${tensNames[t]} ${ones[o]}` : tensNames[t];
+  }
+
+  // split a 4‑digit number into two‑digit chunks and speak each
+  function numberToSpoken(num) {
+    const s = num.toString().padStart(4,'0');
+    const first  = parseInt(s.slice(0,2), 10);
+    const second = parseInt(s.slice(2),   10);
+    const w1 = twoDigitToWords(first);
+    const w2 = second < 10
+      ? `oh ${twoDigitToWords(second)}`
+      : twoDigitToWords(second);
+    return `${w1} ${w2}`;
+  }
+
+  function speak(text) {
+    const [first, ...rest] = text.split('. ');
+    const u1 = new SpeechSynthesisUtterance(first + '.');
+    u1.onend = () => setTimeout(() => {
+      if (rest.length) speechSynthesis.speak(
+        new SpeechSynthesisUtterance(rest.join('. '))
+      );
+    }, 1000);
+    speechSynthesis.speak(u1);
+  }
+
+  function playAll(texts, pause) {
+    const partPause = 1000;
+    function playAt(i) {
+      if (i >= texts.length) return;
+      const [first, ...rest] = texts[i].split('. ');
+      const u1 = new SpeechSynthesisUtterance(first + '.');
+      u1.onend = () => setTimeout(() => {
+        if (rest.length) {
+          const u2 = new SpeechSynthesisUtterance(rest.join('. '));
+          u2.onend = () => setTimeout(() => playAt(i+1), pause);
+          speechSynthesis.speak(u2);
+        } else {
+          setTimeout(() => playAt(i+1), pause);
+        }
+      }, partPause);
+      speechSynthesis.speak(u1);
+    }
+    playAt(0);
+  }
+
+  document.getElementById('pause').addEventListener('input', e => {
+    document.getElementById('pauseVal').textContent =
+      parseFloat(e.target.value).toFixed(1);
+  });
+
+  function generate() {
+    const topVals    = [2398, 2399];
+    const letters    = ['N','Q','U','Z','H','M'];
+    const firstNums  = [2300,2350,2375,2385];
+    const secondNums = [2405,2410,2425,2450,2475];
+    const spreads    = ['risk reversal','call spread','put spread'];
+
+    let count = parseInt(document.getElementById('count').value,10)||1;
+    if (count<1) count=1;
+
+    const container = document.getElementById('boxes');
+    container.innerHTML = '';
+    const texts = [];
+
+    for (let i=0; i<count; i++) {
+      const box = document.createElement('div');
+      box.className = 'box';
+
+      const topVal     = choose(topVals);
+      const letterVal  = choose(letters);
+      const firstNum   = choose(firstNums);
+      const secondNum  = choose(secondNums);
+      const spreadVal  = choose(spreads);
+
+      // for display
+      const pTop    = document.createElement('p'); pTop.textContent    = topVal;
+      const pLet    = document.createElement('p'); pLet.textContent    = letterVal;
+      const pNums   = document.createElement('p');
+      pNums.textContent = `${firstNum} ${secondNum}`;
+      const pSpread = document.createElement('p'); pSpread.textContent = spreadVal;
+
+      // for speech
+      const spokenTop   = numberToSpoken(topVal);
+      const spokenNums  = numberToSpoken(firstNum) + ' ' + numberToSpoken(secondNum);
+      const spokenLet   = letterMap[letterVal] || letterVal;
+      const text        = `tied to ${spokenTop}. ${spokenLet}. ${spokenNums}. ${spreadVal}.`;
+
+      const speakBtn = document.createElement('button');
+      speakBtn.className = 'speak-btn';
+      speakBtn.innerHTML = '🔊';
+      speakBtn.addEventListener('click', () => speak(text));
+
+      box.append(pTop, pLet, pNums, pSpread, speakBtn);
+      container.appendChild(box);
+      texts.push(text);
     }
 
-    function speak(text) {
-      const utter = new SpeechSynthesisUtterance(text);
-      speechSynthesis.speak(utter);
+    if (document.getElementById('autoPlay').checked) {
+      const pauseMs = parseFloat(document.getElementById('pause').value) * 1000;
+      playAll(texts, pauseMs);
     }
+  }
 
-    function playAll(texts, pause) {
-      function playAt(i) {
-        if (i >= texts.length) return;
-        const utter = new SpeechSynthesisUtterance(texts[i]);
-        utter.onend = () => setTimeout(() => playAt(i + 1), pause);
-        speechSynthesis.speak(utter);
-      }
-      playAt(0);
-    }
-
-    document.getElementById('pause').addEventListener('input', e => {
-      document.getElementById('pauseVal').textContent = parseFloat(e.target.value).toFixed(1);
-    });
-
-    function generate() {
-      const topVals    = [2398, 2399];
-      const letters    = ['N', 'Q', 'U', 'Z', 'H', 'M'];
-      const firstNums  = [2300, 2350, 2375, 2385];
-      const secondNums = [2405, 2410, 2425, 2450, 2475];
-      const spreads    = ['risk reversal', 'call spread', 'put spread'];
-
-      let count = parseInt(document.getElementById('count').value, 10) || 1;
-      if (count < 1) count = 1;
-
-      const container = document.getElementById('boxes');
-      container.innerHTML = '';
-
-      const texts = [];
-      for (let i = 0; i < count; i++) {
-        const box = document.createElement('div');
-        box.className = 'box';
-
-        const topVal    = choose(topVals);
-        const letterVal = choose(letters);
-        const numPair   = `${choose(firstNums)} ${choose(secondNums)}`;
-        const spreadVal = choose(spreads);
-
-        const spokenLetter = letterMap[letterVal] || letterVal;
-        const text        = `tied to ${topVal}. ${spokenLetter}. ${numPair}. ${spreadVal}.`;
-
-        const pTop    = document.createElement('p'); pTop.textContent    = topVal;
-        const pLet    = document.createElement('p'); pLet.textContent    = letterVal;
-        const pNums   = document.createElement('p'); pNums.textContent   = numPair;
-        const pSpread = document.createElement('p'); pSpread.textContent = spreadVal;
-
-        const speakBtn = document.createElement('button');
-        speakBtn.className = 'speak-btn';
-        speakBtn.innerHTML = '🔊';
-        speakBtn.addEventListener('click', () => speak(text));
-
-        box.append(pTop, pLet, pNums, pSpread, speakBtn);
-        container.appendChild(box);
-        texts.push(text);
-      }
-
-      if (document.getElementById('autoPlay').checked) {
-        const pauseSec = parseFloat(document.getElementById('pause').value);
-        const pauseMs = pauseSec * 1000;
-        playAll(texts, pauseMs);
-      }
-    }
-
-    document.getElementById('count').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter') generate();
-    });
-  </script>
+  document.getElementById('count')
+    .addEventListener('keydown', e => { if (e.key==='Enter') generate() });
+</script>
 </body>
 </html>
