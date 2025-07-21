@@ -65,7 +65,7 @@
     <button onclick="generate()">Generate</button>
     <label><input type="checkbox" id="autoPlay"> Auto play</label>
     <label for="pause">Pause (s):</label>
-    <input type="range" id="pause" min="0" max="5" step="0.1" value="1">
+    <input type="range" id="pause" min="0" max="10" step="0.1" value="1">
     <span id="pauseVal">1.0</span>
   </div>
 
@@ -85,7 +85,6 @@
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  // convert 0–99 to words
   function twoDigitToWords(n) {
     const ones = [
       'zero','one','two','three','four','five','six','seven','eight','nine',
@@ -100,17 +99,21 @@
     return o ? `${tensNames[t]} ${ones[o]}` : tensNames[t];
   }
 
-  // split a 4‑digit number into two‑digit chunks and speak each
-  function numberToSpoken(num) {
-    const s = num.toString().padStart(4,'0');
-    const first  = parseInt(s.slice(0,2), 10);
-    const second = parseInt(s.slice(2),   10);
-    const w1 = twoDigitToWords(first);
-    const w2 = second < 10
-      ? `oh ${twoDigitToWords(second)}`
-      : twoDigitToWords(second);
-    return `${w1} ${w2}`;
+function numberToSpoken(num) {
+  if (num % 100 === 0) {
+    const hundreds = Math.floor(num / 100);        
+    return twoDigitToWords(hundreds) + ' hundred'; 
   }
+
+  const s = num.toString().padStart(4,'0');
+  const first  = parseInt(s.slice(0,2), 10);
+  const second = parseInt(s.slice(2),   10);
+  const w1 = twoDigitToWords(first);
+  const w2 = second < 10
+    ? 'oh ' + twoDigitToWords(second)
+    : twoDigitToWords(second);
+  return `${w1} ${w2}`;
+}
 
   function speak(text) {
     const [first, ...rest] = text.split('. ');
@@ -172,14 +175,12 @@
       const secondNum  = choose(secondNums);
       const spreadVal  = choose(spreads);
 
-      // for display
       const pTop    = document.createElement('p'); pTop.textContent    = topVal;
       const pLet    = document.createElement('p'); pLet.textContent    = letterVal;
       const pNums   = document.createElement('p');
       pNums.textContent = `${firstNum} ${secondNum}`;
       const pSpread = document.createElement('p'); pSpread.textContent = spreadVal;
 
-      // for speech
       const spokenTop   = numberToSpoken(topVal);
       const spokenNums  = numberToSpoken(firstNum) + ' ' + numberToSpoken(secondNum);
       const spokenLet   = letterMap[letterVal] || letterVal;
