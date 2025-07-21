@@ -60,7 +60,7 @@
 </head>
 <body>
   <div class="controls">
-    <label for="count">Count (1-10):</label>
+    <label for="count">Count:</label>
     <input type="number" id="count" min="1" max="10" value="1">
     <button onclick="generate()">Generate</button>
     <label><input type="checkbox" id="autoPlay"> Auto play</label>
@@ -113,7 +113,6 @@
 
       let count = parseInt(document.getElementById('count').value, 10) || 1;
       if (count < 1) count = 1;
-      if (count > 10) count = 10;
 
       const container = document.getElementById('boxes');
       container.innerHTML = '';
