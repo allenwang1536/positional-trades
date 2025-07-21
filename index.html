@@ -16,8 +16,10 @@
       display: flex;
       align-items: center;
       gap: 0.5em;
+      flex-wrap: wrap;
+      justify-content: center;
     }
-    label, input, button {
+    label, input, button, span {
       font-size: 1em;
     }
     button {
@@ -58,15 +60,18 @@
 </head>
 <body>
   <div class="controls">
-    <label for="count">Count:</label>
+    <label for="count">Count (1-10):</label>
     <input type="number" id="count" min="1" max="10" value="1">
     <button onclick="generate()">Generate</button>
+    <label><input type="checkbox" id="autoPlay"> Auto play</label>
+    <label for="pause">Pause (s):</label>
+    <input type="range" id="pause" min="0" max="5" step="0.1" value="1">
+    <span id="pauseVal">1.0</span>
   </div>
 
   <div id="boxes" class="boxes-container"></div>
 
   <script>
-    // Mapping for spoken letters
     const letterMap = {
       'N': 'July',
       'Q': 'Auggy',
@@ -85,6 +90,20 @@
       speechSynthesis.speak(utter);
     }
 
+    function playAll(texts, pause) {
+      function playAt(i) {
+        if (i >= texts.length) return;
+        const utter = new SpeechSynthesisUtterance(texts[i]);
+        utter.onend = () => setTimeout(() => playAt(i + 1), pause);
+        speechSynthesis.speak(utter);
+      }
+      playAt(0);
+    }
+
+    document.getElementById('pause').addEventListener('input', e => {
+      document.getElementById('pauseVal').textContent = parseFloat(e.target.value).toFixed(1);
+    });
+
     function generate() {
       const topVals    = [2398, 2399];
       const letters    = ['N', 'Q', 'U', 'Z', 'H', 'M'];
@@ -92,21 +111,25 @@
       const secondNums = [2405, 2410, 2425, 2450, 2475];
       const spreads    = ['risk reversal', 'call spread', 'put spread'];
 
-      const countInput = document.getElementById('count');
-      let count = parseInt(countInput.value, 10) || 1;
+      let count = parseInt(document.getElementById('count').value, 10) || 1;
       if (count < 1) count = 1;
+      if (count > 10) count = 10;
 
       const container = document.getElementById('boxes');
       container.innerHTML = '';
 
+      const texts = [];
       for (let i = 0; i < count; i++) {
         const box = document.createElement('div');
         box.className = 'box';
 
         const topVal    = choose(topVals);
         const letterVal = choose(letters);
-        const numPair   = `${choose(firstNums)} ${choose(secondNums)}`;
+        const numPair   = `${choose(firstNums)} , ${choose(secondNums)}`;
         const spreadVal = choose(spreads);
+
+        const spokenLetter = letterMap[letterVal] || letterVal;
+        const text        = `tied to ${topVal}. ${spokenLetter}. ${numPair}. ${spreadVal}.`;
 
         const pTop    = document.createElement('p'); pTop.textContent    = topVal;
         const pLet    = document.createElement('p'); pLet.textContent    = letterVal;
@@ -116,14 +139,17 @@
         const speakBtn = document.createElement('button');
         speakBtn.className = 'speak-btn';
         speakBtn.innerHTML = '🔊';
-        speakBtn.addEventListener('click', () => {
-          const spokenLetter = letterMap[letterVal] || letterVal;
-          const text = `tied to ${topVal}. ${spokenLetter}. ${numPair}. ${spreadVal}.`;
-          speak(text);
-        });
+        speakBtn.addEventListener('click', () => speak(text));
 
         box.append(pTop, pLet, pNums, pSpread, speakBtn);
         container.appendChild(box);
+        texts.push(text);
+      }
+
+      if (document.getElementById('autoPlay').checked) {
+        const pauseSec = parseFloat(document.getElementById('pause').value);
+        const pauseMs = pauseSec * 1000;
+        playAll(texts, pauseMs);
       }
     }
 
